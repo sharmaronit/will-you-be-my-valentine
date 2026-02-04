@@ -1,0 +1,19 @@
+{
+  "name": "will-you-be-my-valentine",
+  "version": "1.0.0",
+  "description": "Interactive hand gesture recognition Valentine's Day web application",
+  "keywords": [
+    "valentine",
+    "hand-gesture",
+    "mediapipe",
+    "interactive",
+    "webcam"
+  ],
+  "author": "Ronit Sharma",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/sharmaronit/will-you-be-my-valentine.git"
+  },
+  "private": true
+}
