@@ -2,6 +2,13 @@
 
 An interactive hand gesture recognition Valentine's Day web application built with **Google MediaPipe Hands** and vanilla JavaScript.
 
+## 🌐 Live Demo
+
+**[Visit the Live App](https://will-you-be-my-valentine-pc.vercel.app/)**
+
+- **Desktop Version**: https://will-you-be-my-valentine-pc.vercel.app/
+- **Mobile Version**: https://will-you-be-my-valentine-pc.vercel.app/mobile
+
 ## Features
 
 ✨ **Hand Gesture Detection**: Use hand gestures to unlock a romantic surprise
