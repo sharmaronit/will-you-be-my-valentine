@@ -497,7 +497,7 @@
             left: 50%;
             transform: translateX(-50%);
             color: #ffffff;
-            font-size: 0.75rem;
+            font-size: 1.1rem;
             z-index: 15;
             pointer-events: none;
             font-family: 'Pacifico', cursive;
@@ -521,6 +521,144 @@
 
             #instructionText {
                 top: max(15px, env(safe-area-inset-top));
+            }
+        }
+
+        /* YES/NO Button Container */
+        #responseButtons {
+            position: relative;
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            z-index: 15;
+            opacity: 1;
+            pointer-events: auto;
+            transition: opacity 0.8s ease;
+            margin-top: 15px;
+            width: 100%;
+        }
+
+        #responseButtons.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .response-btn {
+            padding: 10px 25px;
+            font-size: 1rem;
+            font-family: 'Pacifico', cursive;
+            font-weight: bold;
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+        }
+
+        #yesBtn {
+            background: linear-gradient(135deg, #FF69B4, #FF1493);
+            color: white;
+            box-shadow: 0 4px 15px rgba(255, 20, 147, 0.4);
+        }
+
+        #yesBtn:hover {
+            transform: scale(1.1);
+            box-shadow: 0 6px 20px rgba(255, 20, 147, 0.6);
+        }
+
+        #yesBtn:active {
+            transform: scale(0.95);
+        }
+
+        #noBtn {
+            background: rgba(100, 100, 100, 0.6);
+            color: rgba(255, 255, 255, 0.8);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            position: relative;
+        }
+
+        #noBtn:hover {
+            background: rgba(100, 100, 100, 0.3);
+        }
+
+        /* Cat Photo Display */
+        #catPhotoContainer {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 280px;
+            height: 280px;
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 8px 32px rgba(255, 105, 180, 0.4);
+            z-index: 20;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.8s ease;
+            background: white;
+        }
+
+        #catPhotoContainer.visible {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        #catPhotoContainer .close-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(255, 255, 255, 0.3);
+            border: 2px solid rgba(255, 255, 255, 0.6);
+            color: white;
+            font-size: 1.5rem;
+            cursor: pointer;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+            z-index: 25;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        #catPhotoContainer .close-btn:hover {
+            background: rgba(255, 105, 180, 0.6);
+            border-color: white;
+            transform: scale(1.1);
+        }
+
+        #catPhotoContainer img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        /* Date When Text Overlay */
+        .cat-text-overlay {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 1.5rem;
+            font-family: 'Pacifico', cursive;
+            color: rgba(255, 255, 255, 0.95);
+            text-shadow: 0 4px 15px rgba(0, 0, 0, 0.7);
+            z-index: 5;
+            animation: fadeInUp 0.8s ease;
+            text-align: center;
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translate(-50%, -50%) translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translate(-50%, -50%) translateY(0);
             }
         }
     </style>
@@ -594,7 +732,23 @@
                     <span class="dot" onclick="goToSlide(5)"></span>
                     <div class="credit-text">Made with ❤️ by <a href="https://github.com/sharmaronit" target="_blank">@sharma.ronnitt</a></div>
                 </div>
+
+                <div id="responseButtons">
+                    <button class="response-btn" id="yesBtn" onclick="handleYes()">YES 💖</button>
+                    <button class="response-btn" id="noBtn">NO</button>
+                </div>
             </div>
+        </div>
+
+        <div id="responseButtons">
+            <button class="response-btn" id="yesBtn" onclick="handleYes()">YES 💖</button>
+            <button class="response-btn" id="noBtn">NO</button>
+        </div>
+
+        <div id="catPhotoContainer">
+            <button class="close-btn" onclick="closeModal()">✕</button>
+            <img id="catPhoto" src="cat images/date when.jpg" alt="date when">
+            <div class="cat-text-overlay">date when? 💕</div>
         </div>
     </div>
 
@@ -818,12 +972,68 @@
                 successModal.classList.add('visible');
                 console.log('💝 Success modal displayed');
                 startSlideshow();
+                
+                // Show YES/NO buttons after slideshow plays for 12 seconds (2 full cycles)
+                setTimeout(() => {
+                    transitionToButtons();
+                }, 12000);
             }, 300);
         }
 
+        // Transition from slideshow to YES/NO buttons
+        function transitionToButtons() {
+            const responseButtons = document.getElementById('responseButtons');
+            
+            // Show YES/NO buttons on top of the slideshow
+            responseButtons.classList.remove('hidden');
+            console.log('💝 YES/NO buttons now visible with slideshow in background');
+        }
+
+        // Handle YES button click
+        function handleYes() {
+            const successModal = document.getElementById('successModal');
+            const responseButtons = document.getElementById('responseButtons');
+            const catContainer = document.getElementById('catPhotoContainer');
+            
+            // Fade out slideshow and buttons
+            successModal.style.opacity = '0';
+            responseButtons.classList.add('hidden');
+            
+            setTimeout(() => {
+                successModal.classList.remove('visible');
+                catContainer.classList.add('visible');
+                console.log('💕 Showing cat photo!');
+            }, 500);
+        }
+
+        // Handle NO button hover - make it jump away
+        function handleNoHover() {
+            const noBtn = document.getElementById('noBtn');
+            const randomX = (Math.random() - 0.5) * 200;
+            const randomY = (Math.random() - 0.5) * 150;
+            
+            noBtn.style.transform = `translate(${randomX}px, ${randomY}px)`;
+        }
+
+        // Initialize NO button evasion
+        document.addEventListener('DOMContentLoaded', () => {
+            const noBtn = document.getElementById('noBtn');
+            if (noBtn) {
+                noBtn.addEventListener('mouseover', handleNoHover);
+                noBtn.addEventListener('touchstart', handleNoHover);
+            }
+        });
+
         // Close modal and reset to main screen
         function closeModal() {
+            const successModal = document.getElementById('successModal');
+            const responseButtons = document.getElementById('responseButtons');
+            const catContainer = document.getElementById('catPhotoContainer');
+            
             successModal.classList.remove('visible');
+            responseButtons.classList.remove('visible');
+            catContainer.classList.remove('visible');
+            
             gestureLocked = false;
             currentSlide = 0;
             clearInterval(autoPlayTimer);
