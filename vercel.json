@@ -14,6 +14,15 @@
       ]
     },
     {
+      "source": "/index.mobile.html",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=3600"
+        }
+      ]
+    },
+    {
       "source": "/cat images/:image",
       "headers": [
         {
@@ -23,14 +32,14 @@
       ]
     }
   ],
-  "rewrites": [
+  "routes": [
     {
-      "source": "/",
-      "destination": "/index.html"
+      "src": "/mobile",
+      "dest": "/index.mobile.html"
     },
     {
-      "source": "/mobile",
-      "destination": "/index.mobile.html"
+      "src": "/",
+      "dest": "/index.html"
     }
   ]
 }
