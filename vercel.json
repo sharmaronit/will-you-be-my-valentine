@@ -1,7 +1,7 @@
 {
   "buildCommand": "",
   "outputDirectory": ".",
-  "cleanUrls": true,
+  "cleanUrls": false,
   "trailingSlash": false,
   "headers": [
     {
@@ -32,14 +32,14 @@
       ]
     }
   ],
-  "routes": [
+  "rewrites": [
     {
-      "src": "/mobile",
-      "dest": "/index.mobile.html"
+      "source": "/mobile",
+      "destination": "/index.mobile.html"
     },
     {
-      "src": "/",
-      "dest": "/index.html"
+      "source": "/mobile.html",
+      "destination": "/index.mobile.html"
     }
   ]
 }
