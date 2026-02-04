@@ -1,0 +1,932 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#0a0e27">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>Will You Be My Valentine? 💕</title>
+    
+    <!-- Google Fonts: Cute handwritten style -->
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Patrick+Hand&family=Pacifico&display=swap" rel="stylesheet">
+    
+    <!-- Confetti Library via CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.5.1/dist/confetti.browser.min.js"></script>
+    
+    <!-- Google MediaPipe Solutions - Stable Version -->
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js"></script>
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-user-select: none;
+            user-select: none;
+            -webkit-touch-callout: none;
+        }
+
+        html, body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            -webkit-font-smoothing: antialiased;
+            -webkit-text-size-adjust: 100%;
+        }
+
+        html {
+            overflow: hidden;
+            position: fixed;
+        }
+
+        body {
+            width: 100%;
+            height: 100vh;
+            font-family: 'Fredoka One', cursive;
+            overflow: hidden;
+            background: linear-gradient(135deg, #ffe0f0 0%, #fff0f7 50%, #ffe6f0 100%);
+            position: fixed;
+            top: 0;
+            left: 0;
+        }
+
+        /* Hide scrollbars */
+        ::-webkit-scrollbar {
+            display: none;
+        }
+
+        body, html {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+
+        /* Video Container */
+        #videoContainer {
+            position: fixed;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+        }
+
+        video {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transform: scaleX(-1);
+        }
+
+        /* Dark Overlay */
+        #overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.3);
+            pointer-events: none;
+        }
+        }
+
+        /* Canvas for hand skeleton */
+        canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            transform: scaleX(-1);
+        }
+
+        /* Main Question Text */
+        #mainText {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            z-index: 10;
+            animation: float 3s ease-in-out infinite;
+            opacity: 1;
+            transition: opacity 0.8s ease-out;
+            pointer-events: none;
+            padding: 20px;
+        }
+
+        #mainText.hidden {
+            opacity: 0;
+        }
+
+        .question {
+            font-size: 2.5rem;
+            color: #ff1493;
+            text-shadow: 
+                0 0 20px rgba(255, 105, 180, 0.8),
+                0 4px 15px rgba(0, 0, 0, 0.5);
+            font-weight: bold;
+            font-family: 'Pacifico', cursive;
+            letter-spacing: 2px;
+            line-height: 1.2;
+        }
+
+        /* Floating Animation */
+        @keyframes float {
+            0%, 100% {
+                transform: translate(-50%, -50%);
+            }
+            50% {
+                transform: translate(-50%, -45%);
+            }
+        }
+
+        /* Progress Text */
+        #progressText {
+            position: fixed;
+            bottom: 60px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 1.8rem;
+            color: #FF1493;
+            text-shadow: 
+                0 0 20px rgba(255, 105, 180, 1),
+                0 0 40px rgba(255, 20, 147, 0.8),
+                0 4px 10px rgba(0, 0, 0, 0.8);
+            z-index: 20;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+            pointer-events: none;
+            font-family: 'Pacifico', cursive;
+            font-weight: bold;
+            white-space: nowrap;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 15px;
+            padding: 12px 25px;
+            box-shadow: 0 8px 32px 0 rgba(255, 105, 180, 0.3);
+        }
+
+        #progressText.active {
+            opacity: 1 !important;
+        }
+
+        /* Success Modal */
+        #successModal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 240, 247, 0.95);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.8s ease-out;
+            overflow: hidden;
+        }
+
+        #successModal.visible {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .modal-content {
+            text-align: center;
+            padding: 20px;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            animation: slideIn 0.6s ease-out;
+            overflow: hidden;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: scale(0.8);
+                opacity: 0;
+            }
+            to {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+
+        /* Floating Hearts Animation */
+        .floating-heart {
+            position: absolute;
+            font-size: 2.5rem;
+            pointer-events: none;
+            user-select: none;
+            animation: float-up 2s ease-in infinite;
+        }
+
+        @keyframes float-up {
+            0% {
+                transform: translateY(0px) translateX(0px) scale(1);
+                opacity: 1;
+            }
+            50% {
+                opacity: 1;
+            }
+            100% {
+                transform: translateY(-300px) translateX(var(--tx)) scale(0);
+                opacity: 0;
+            }
+        }
+
+        .floating-heart:nth-child(1) {
+            --tx: 20px;
+            left: 10%;
+            bottom: 10%;
+            animation-delay: 0s;
+        }
+
+        .floating-heart:nth-child(2) {
+            --tx: -30px;
+            left: 20%;
+            bottom: 5%;
+            animation-delay: 0.5s;
+            font-size: 2.1rem;
+        }
+
+        .floating-heart:nth-child(3) {
+            --tx: 35px;
+            right: 15%;
+            bottom: 8%;
+            animation-delay: 1s;
+            font-size: 2.3rem;
+        }
+
+        .floating-heart:nth-child(4) {
+            --tx: -25px;
+            right: 10%;
+            bottom: 12%;
+            animation-delay: 1.5s;
+            font-size: 2.2rem;
+        }
+
+        .floating-heart:nth-child(5) {
+            --tx: 15px;
+            left: 50%;
+            bottom: 5%;
+            animation-delay: 2s;
+        }
+
+        .floating-heart:nth-child(6) {
+            --tx: -15px;
+            left: 35%;
+            bottom: 15%;
+            animation-delay: 2.5s;
+            font-size: 1.9rem;
+        }
+
+        .modal-title {
+            font-size: 2rem;
+            color: #ff1493;
+            text-shadow: 
+                0 0 30px rgba(255, 105, 180, 0.9),
+                0 0 60px rgba(255, 105, 180, 0.5);
+            margin-bottom: 20px;
+            animation: pulse 1s ease-in-out infinite;
+            font-family: 'Pacifico', cursive;
+        }
+
+        @keyframes pulse {
+            0%, 100% {
+                transform: scale(1);
+            }
+            50% {
+                transform: scale(1.05);
+            }
+        }
+
+        /* Slideshow Container */
+        .slideshow-container {
+            position: relative;
+            max-width: 320px;
+            width: 85%;
+            max-height: 320px;
+            background: rgba(255, 255, 255, 0.08);
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(6.7px);
+            -webkit-backdrop-filter: blur(6.7px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .slide {
+            display: none;
+            width: 100%;
+            height: 100%;
+            aspect-ratio: 1;
+            animation: fadeIn 0.8s ease-in-out;
+        }
+
+        .slide.active {
+            display: block;
+        }
+
+        .slide img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: 20px;
+        }
+
+        /* Slide Text Overlay */
+        .slide-text {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 1.2rem;
+            color: rgba(255, 255, 255, 0.95);
+            text-shadow: 0 4px 15px rgba(0, 0, 0, 0.6);
+            font-family: 'Pacifico', cursive;
+            font-weight: bold;
+            text-align: center;
+            pointer-events: none;
+            white-space: nowrap;
+            z-index: 4;
+        }
+
+        /* Close Button */
+        .close-btn {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            width: 40px;
+            height: 40px;
+            background: rgba(255, 105, 180, 0.8);
+            border: none;
+            border-radius: 8px;
+            color: white;
+            font-size: 1.8rem;
+            cursor: pointer;
+            z-index: 1001;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0;
+        }
+
+        .close-btn:hover {
+            background: rgba(255, 20, 147, 0.95);
+            transform: scale(1.1);
+        }
+
+        .close-btn:active {
+            transform: scale(0.95);
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: scale(0.95);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+
+        /* Navigation Buttons */
+        .slide-nav {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            background: rgba(255, 105, 180, 0.3);
+            color: white;
+            border: none;
+            font-size: 1.3rem;
+            padding: 10px 14px;
+            cursor: pointer;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+            z-index: 5;
+            font-weight: bold;
+            -webkit-tap-highlight-color: transparent;
+            active: none;
+        }
+
+        .slide-nav:active {
+            background: rgba(255, 20, 147, 0.9);
+            transform: translateY(-50%) scale(1.05);
+        }
+
+        .prev {
+            left: 10px;
+        }
+
+        .next {
+            right: 10px;
+        }
+
+        /* Dot Indicators */
+        .dots-container {
+            text-align: center;
+            padding: 12px;
+            background: transparent;
+        }
+
+        .dot {
+            height: 10px;
+            width: 10px;
+            margin: 0 5px;
+            background-color: rgba(255, 105, 180, 0.5);
+            border-radius: 50%;
+            display: inline-block;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 2px solid rgba(255, 105, 180, 0.8);
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .dot.active {
+            background-color: #FF69B4;
+            transform: scale(1.3);
+            box-shadow: 0 0 15px rgba(255, 105, 180, 0.8);
+        }
+
+        .dot:active {
+            background-color: #FF1493;
+            transform: scale(1.2);
+        }
+
+        /* Credit Text */
+        .credit-text {
+            margin-top: 15px;
+            font-size: 0.7rem;
+            color: rgba(255, 105, 180, 0.7);
+            text-align: center;
+            font-family: 'Fredoka One', cursive;
+            letter-spacing: 0.5px;
+        }
+
+        .credit-text a {
+            color: rgba(255, 105, 180, 0.9);
+            text-decoration: none;
+            font-weight: bold;
+            transition: all 0.3s ease;
+        }
+
+        .credit-text a:hover {
+            color: #FF1493;
+            text-decoration: underline;
+        }
+
+        /* Instruction text */
+        #instructionText {
+            position: fixed;
+            top: 15px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: #ffffff;
+            font-size: 0.75rem;
+            z-index: 15;
+            pointer-events: none;
+            font-family: 'Pacifico', cursive;
+            text-shadow: 0 2px 10px rgba(0, 0, 0, 0.8);
+            text-align: center;
+            padding: 10px 15px;
+            max-width: 90%;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 12px;
+            box-shadow: 0 8px 32px 0 rgba(255, 105, 180, 0.15);
+        }
+
+        /* iPhone notch/safe area support */
+        @supports (padding: max(0px)) {
+            #progressText {
+                bottom: max(20px, env(safe-area-inset-bottom));
+            }
+
+            #instructionText {
+                top: max(15px, env(safe-area-inset-top));
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="videoContainer">
+        <video id="video" autoplay playsinline muted></video>
+        <div id="overlay"></div>
+        <canvas id="canvas"></canvas>
+
+        <div id="mainText">
+            <div class="question">Will you be my Valentine? 💕</div>
+        </div>
+
+        <div id="instructionText">
+            Make a heart shape to unlock ✨
+        </div>
+
+        <div id="progressText">HOLDING... 0%</div>
+
+        <div id="successModal">
+            <button class="close-btn" onclick="closeModal()">✕</button>
+            <div class="floating-heart">💕</div>
+            <div class="floating-heart">💖</div>
+            <div class="floating-heart">💗</div>
+            <div class="floating-heart">💝</div>
+            <div class="floating-heart">💓</div>
+            <div class="floating-heart">💞</div>
+            <div class="modal-content">
+                <div class="modal-title">Happy Valentine's Day! 💖</div>
+                
+                <!-- Slideshow -->
+                <div class="slideshow-container">
+                    <div class="slide active">
+                        <img src="cat images/cat 1.jpg" alt="cute cat 1">
+                        <div class="slide-text">Will you be my Valentine? 🌹</div>
+                    </div>
+                    <div class="slide">
+                        <img src="cat images/cat 2.jpg" alt="cute cat 2">
+                        <div class="slide-text">Will you be my Valentine? 🌹</div>
+                    </div>
+                    <div class="slide">
+                        <img src="cat images/cat 3.jpg" alt="cute cat 3">
+                        <div class="slide-text">Will you be my Valentine? 🌹</div>
+                    </div>
+                    <div class="slide">
+                        <img src="cat images/cat 4.jpg" alt="cute cat 4">
+                        <div class="slide-text">Will you be my Valentine? 🌹</div>
+                    </div>
+                    <div class="slide">
+                        <img src="cat images/cAT 5.jpg" alt="cute cat 5">
+                        <div class="slide-text">Will you be my Valentine? 🌹</div>
+                    </div>
+                    <div class="slide">
+                        <img src="cat images/cat 6.jpg" alt="cute cat 6">
+                        <div class="slide-text">Will you be my Valentine? 🌹</div>
+                    </div>
+
+                    <!-- Navigation Buttons -->
+                    <button class="slide-nav prev" onclick="changeSlide(-1)">❮</button>
+                    <button class="slide-nav next" onclick="changeSlide(1)">❯</button>
+                </div>
+
+                <!-- Dot Indicators -->
+                <div class="dots-container">
+                    <span class="dot active" onclick="goToSlide(0)"></span>
+                    <span class="dot" onclick="goToSlide(1)"></span>
+                    <span class="dot" onclick="goToSlide(2)"></span>
+                    <span class="dot" onclick="goToSlide(3)"></span>
+                    <span class="dot" onclick="goToSlide(4)"></span>
+                    <span class="dot" onclick="goToSlide(5)"></span>
+                    <div class="credit-text">Made with ❤️ by <a href="https://github.com/sharmaronit" target="_blank">@sharma.ronnitt</a></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const video = document.getElementById('video');
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const progressText = document.getElementById('progressText');
+        const mainText = document.getElementById('mainText');
+        const successModal = document.getElementById('successModal');
+        const videoContainer = document.getElementById('videoContainer');
+
+        let hands;
+        let camera;
+        let holdingStartTime = null;
+        let isHolding = false;
+        let gestureLocked = false;
+        let animationFrameId = null;
+
+        const THUMB_TIP = 4;
+        const INDEX_TIP = 8;
+        const DISTANCE_THRESHOLD = 120;
+        const HOLD_DURATION = 2000;
+
+        async function setupHands() {
+            try {
+                console.log('🔧 Initializing MediaPipe Hands...');
+
+                hands = new Hands({
+                    locateFile: (file) => {
+                        return `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`;
+                    }
+                });
+
+                hands.setOptions({
+                    maxNumHands: 2,
+                    modelComplexity: 1,
+                    minDetectionConfidence: 0.7,
+                    minTrackingConfidence: 0.5,
+                });
+
+                hands.onResults(onHandsResults);
+
+                console.log('✓ Hands initialized, setting up camera...');
+
+                camera = new Camera(video, {
+                    onFrame: async () => {
+                        await hands.send({ image: video });
+                    },
+                    width: 1280,
+                    height: 720,
+                });
+
+                camera.start();
+                console.log('✓ Camera started successfully');
+            } catch (error) {
+                console.error('❌ Setup error:', error);
+                throw error;
+            }
+        }
+
+        function resizeCanvas() {
+            canvas.width = videoContainer.offsetWidth;
+            canvas.height = videoContainer.offsetHeight;
+        }
+        resizeCanvas();
+        window.addEventListener('resize', resizeCanvas);
+
+        function detectHeartGesture(landmarks, canvasWidth, canvasHeight) {
+            const thumbTip = landmarks[THUMB_TIP];
+            const indexTip = landmarks[INDEX_TIP];
+
+            const thumbPixelX = thumbTip.x * canvasWidth;
+            const thumbPixelY = thumbTip.y * canvasHeight;
+            const indexPixelX = indexTip.x * canvasWidth;
+            const indexPixelY = indexTip.y * canvasHeight;
+
+            const distance = Math.sqrt(
+                Math.pow(thumbPixelX - indexPixelX, 2) + 
+                Math.pow(thumbPixelY - indexPixelY, 2)
+            );
+
+            const isTouching = distance < DISTANCE_THRESHOLD;
+
+            return {
+                distance: distance,
+                thumbPos: { x: thumbPixelX, y: thumbPixelY },
+                indexPos: { x: indexPixelX, y: indexPixelY },
+                isTouching: isTouching,
+            };
+        }
+
+        function drawHand(landmarks, canvasWidth, canvasHeight) {
+            landmarks.forEach((landmark) => {
+                const x = landmark.x * canvasWidth;
+                const y = landmark.y * canvasHeight;
+
+                ctx.fillStyle = '#FFFFFF';
+                ctx.beginPath();
+                ctx.arc(x, y, 4, 0, 2 * Math.PI);
+                ctx.fill();
+            });
+
+            const connections = [
+                [0, 1], [1, 2], [2, 3], [3, 4],
+                [0, 5], [5, 6], [6, 7], [7, 8],
+                [0, 9], [9, 10], [10, 11], [11, 12],
+                [0, 13], [13, 14], [14, 15], [15, 16],
+                [0, 17], [17, 18], [18, 19], [19, 20],
+                [5, 9], [9, 13], [13, 17],
+            ];
+
+            connections.forEach(([start, end]) => {
+                const startPos = landmarks[start];
+                const endPos = landmarks[end];
+
+                const startX = startPos.x * canvasWidth;
+                const startY = startPos.y * canvasHeight;
+                const endX = endPos.x * canvasWidth;
+                const endY = endPos.y * canvasHeight;
+
+                ctx.strokeStyle = 'rgba(255, 105, 180, 0.3)';
+                ctx.lineWidth = 10;
+                ctx.lineCap = 'round';
+                ctx.beginPath();
+                ctx.moveTo(startX, startY);
+                ctx.lineTo(endX, endY);
+                ctx.stroke();
+
+                ctx.strokeStyle = '#FF69B4';
+                ctx.lineWidth = 2.5;
+                ctx.lineCap = 'round';
+                ctx.beginPath();
+                ctx.moveTo(startX, startY);
+                ctx.lineTo(endX, endY);
+                ctx.stroke();
+            });
+        }
+
+        let bothHandsValid = false;
+        let leftHandGesture = null;
+        let rightHandGesture = null;
+
+        function onHandsResults(results) {
+            const canvasWidth = canvas.width;
+            const canvasHeight = canvas.height;
+
+            ctx.clearRect(0, 0, canvasWidth, canvasHeight);
+
+            bothHandsValid = false;
+            leftHandGesture = null;
+            rightHandGesture = null;
+
+            if (results.multiHandLandmarks && results.multiHandedness && results.multiHandLandmarks.length > 0) {
+                results.multiHandLandmarks.forEach((landmarks, index) => {
+                    const handedness = results.multiHandedness[index].label;
+
+                    drawHand(landmarks, canvasWidth, canvasHeight);
+                    const gesture = detectHeartGesture(landmarks, canvasWidth, canvasHeight);
+
+                    if (handedness === 'Left') {
+                        leftHandGesture = gesture;
+                    } else if (handedness === 'Right') {
+                        rightHandGesture = gesture;
+                    }
+                });
+
+                if (leftHandGesture && rightHandGesture) {
+                    if (leftHandGesture.isTouching && rightHandGesture.isTouching) {
+                        bothHandsValid = true;
+                    }
+                }
+            }
+
+            updateHoldingState();
+        }
+
+        function updateHoldingState() {
+            if (!gestureLocked && bothHandsValid) {
+                if (!isHolding) {
+                    isHolding = true;
+                    holdingStartTime = Date.now();
+                    console.log('🎯 START HOLDING NOW!');
+                }
+
+                const elapsedTime = Date.now() - holdingStartTime;
+                const progress = Math.min(Math.floor(elapsedTime / HOLD_DURATION * 100), 100);
+
+                progressText.classList.add('active');
+                progressText.textContent = `HOLDING... ${progress}%`;
+
+                if (progress >= 100) {
+                    console.log('💖 100% reached! Triggering success!');
+                    triggerSuccess();
+                }
+            } else {
+                if (isHolding) {
+                    isHolding = false;
+                    holdingStartTime = null;
+                    progressText.classList.remove('active');
+                    progressText.textContent = 'HOLDING... 0%';
+                    console.log('❌ Gesture broken, counter reset');
+                }
+            }
+        }
+
+        function triggerSuccess() {
+            if (gestureLocked) return;
+            
+            gestureLocked = true;
+            isHolding = false;
+            progressText.classList.remove('active');
+
+            console.log('🎉 SUCCESS TRIGGERED!');
+
+            triggerConfetti();
+
+            mainText.classList.add('hidden');
+
+            setTimeout(() => {
+                successModal.classList.add('visible');
+                console.log('💝 Success modal displayed');
+                startSlideshow();
+            }, 300);
+        }
+
+        // Close modal and reset to main screen
+        function closeModal() {
+            successModal.classList.remove('visible');
+            gestureLocked = false;
+            currentSlide = 0;
+            clearInterval(autoPlayTimer);
+            mainText.classList.remove('hidden');
+            console.log('❌ Modal closed, ready for next gesture');
+        }
+
+        function triggerConfetti() {
+            confetti({
+                particleCount: 100,
+                spread: 80,
+                origin: { x: 0.5, y: 0.5 },
+                colors: ['#FF69B4', '#FF1493', '#FFB6C1', '#FFC0CB', '#FFFFFF'],
+            });
+
+            setTimeout(() => {
+                confetti({
+                    particleCount: 80,
+                    spread: 100,
+                    origin: { x: 0.2, y: 0 },
+                    colors: ['#FF69B4', '#FF1493', '#FFB6C1'],
+                });
+            }, 200);
+
+            setTimeout(() => {
+                confetti({
+                    particleCount: 80,
+                    spread: 100,
+                    origin: { x: 0.8, y: 0 },
+                    colors: ['#FF69B4', '#FF1493', '#FFB6C1'],
+                });
+            }, 400);
+        }
+
+        // Slideshow functionality
+        let currentSlide = 0;
+        let autoPlayTimer = null;
+
+        function changeSlide(n) {
+            showSlide(currentSlide += n);
+            resetAutoPlay();
+        }
+
+        function goToSlide(n) {
+            showSlide(currentSlide = n);
+            resetAutoPlay();
+        }
+
+        function showSlide(n) {
+            const slides = document.querySelectorAll('.slide');
+            const dots = document.querySelectorAll('.dot');
+
+            if (n >= slides.length) {
+                currentSlide = 0;
+            } else if (n < 0) {
+                currentSlide = slides.length - 1;
+            }
+
+            slides.forEach(slide => slide.classList.remove('active'));
+            dots.forEach(dot => dot.classList.remove('active'));
+
+            slides[currentSlide].classList.add('active');
+            dots[currentSlide].classList.add('active');
+        }
+
+        function autoPlaySlideshow() {
+            showSlide(currentSlide += 1);
+        }
+
+        function resetAutoPlay() {
+            clearInterval(autoPlayTimer);
+            autoPlayTimer = setInterval(autoPlaySlideshow, 1500);
+        }
+
+        function startSlideshow() {
+            resetAutoPlay();
+        }
+
+        async function initialize() {
+            try {
+                console.log('🎥 Setting up camera and hands...');
+                await setupHands();
+            } catch (error) {
+                console.error('❌ Initialization error:', error);
+                alert('Please allow camera access to use this app.');
+            }
+        }
+
+        window.addEventListener('load', () => {
+            console.log('🚀 Mobile version loaded, initializing...');
+            initialize();
+        });
+
+        // Prevent zooming on mobile
+        document.addEventListener('gesturestart', function(e) {
+            e.preventDefault();
+        });
+
+        document.addEventListener('touchmove', function(e) {
+            if (e.scale !== 1) {
+                e.preventDefault();
+            }
+        }, { passive: false });
+    </script>
+</body>
+</html>

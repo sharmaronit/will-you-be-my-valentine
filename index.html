@@ -1,0 +1,976 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Will You Be My Valentine? 💕</title>
+    
+    <!-- Google Fonts: Cute handwritten style -->
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Patrick+Hand&family=Pacifico&display=swap" rel="stylesheet">
+    
+    <!-- Confetti Library via CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.5.1/dist/confetti.browser.min.js"></script>
+    
+    <!-- Google MediaPipe Solutions - Stable Version -->
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js"></script>
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html {
+            overflow: hidden;
+        }
+
+        body {
+            width: 100%;
+            height: 100vh;
+            font-family: 'Fredoka One', cursive;
+            overflow: hidden;
+            background: linear-gradient(135deg, #ffe0f0 0%, #fff0f7 50%, #ffe6f0 100%);
+        }
+
+        /* Hide scrollbars */
+        ::-webkit-scrollbar {
+            display: none;
+        }
+
+        body, html {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+
+        /* Video Container */
+        #videoContainer {
+            position: relative;
+            width: 100%;
+            height: 100%;
+        }
+
+        video {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transform: scaleX(-1); /* Mirror the video */
+        }
+
+        /* Dark Overlay to improve text readability */
+        #overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.3);
+            pointer-events: none;
+        }
+
+        /* Canvas for hand skeleton */
+        canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            transform: scaleX(-1); /* Mirror canvas to match video */
+        }
+
+        /* Main Question Text */
+        #mainText {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            z-index: 10;
+            animation: float 3s ease-in-out infinite;
+            opacity: 1;
+            transition: opacity 0.8s ease-out;
+            pointer-events: none;
+        }
+
+        #mainText.hidden {
+            opacity: 0;
+        }
+
+        .question {
+            font-size: 4rem;
+            color: #ff1493;
+            text-shadow: 
+                0 0 20px rgba(255, 105, 180, 0.4),
+                0 4px 15px rgba(255, 255, 255, 0.3);
+            font-weight: bold;
+            font-family: 'Pacifico', cursive;
+            letter-spacing: 2px;
+        }
+
+        /* Floating Animation */
+        @keyframes float {
+            0%, 100% {
+                transform: translate(-50%, -50%);
+            }
+            50% {
+                transform: translate(-50%, -45%);
+            }
+        }
+
+        /* Progress Text */
+        #progressText {
+            position: absolute;
+            bottom: 80px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 2.2rem;
+            color: #FF1493;
+            text-shadow: 
+                0 0 20px rgba(255, 105, 180, 1),
+                0 0 40px rgba(255, 20, 147, 0.8),
+                0 4px 10px rgba(0, 0, 0, 0.8);
+            z-index: 20;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+            pointer-events: none;
+            font-family: 'Pacifico', cursive;
+            font-weight: bold;
+            white-space: nowrap;
+            background: rgba(255, 255, 255, 0.08);
+            backdrop-filter: blur(6.7px);
+            -webkit-backdrop-filter: blur(6.7px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 16px;
+            padding: 15px 30px;
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+        }
+
+        #progressText.active {
+            opacity: 1 !important;
+        }
+
+        /* Success Modal */
+        #successModal {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 240, 247, 0.95);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.8s ease-out;
+            overflow: hidden;
+        }
+
+        #successModal.visible {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .modal-content {
+            text-align: center;
+            padding: 30px 20px;
+            max-height: 90vh;
+            animation: slideIn 0.6s ease-out;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: scale(0.8);
+                opacity: 0;
+            }
+            to {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+
+        /* Floating Hearts Animation */
+        .floating-heart {
+            position: absolute;
+            font-size: 3.5rem;
+            pointer-events: none;
+            user-select: none;
+            animation: float-up 2s ease-in infinite;
+        }
+
+        @keyframes float-up {
+            0% {
+                transform: translateY(0px) translateX(0px) scale(1);
+                opacity: 1;
+            }
+            50% {
+                opacity: 1;
+            }
+            100% {
+                transform: translateY(-400px) translateX(var(--tx)) scale(0);
+                opacity: 0;
+            }
+        }
+
+        .floating-heart:nth-child(1) {
+            --tx: 30px;
+            left: 10%;
+            bottom: 10%;
+            animation-delay: 0s;
+        }
+
+        .floating-heart:nth-child(2) {
+            --tx: -40px;
+            left: 20%;
+            bottom: 5%;
+            animation-delay: 0.5s;
+            font-size: 2.8rem;
+        }
+
+        .floating-heart:nth-child(3) {
+            --tx: 50px;
+            right: 15%;
+            bottom: 8%;
+            animation-delay: 1s;
+            font-size: 3.2rem;
+        }
+
+        .floating-heart:nth-child(4) {
+            --tx: -30px;
+            right: 10%;
+            bottom: 12%;
+            animation-delay: 1.5s;
+            font-size: 3rem;
+        }
+
+        .floating-heart:nth-child(5) {
+            --tx: 20px;
+            left: 50%;
+            bottom: 5%;
+            animation-delay: 2s;
+        }
+
+        .floating-heart:nth-child(6) {
+            --tx: -20px;
+            left: 35%;
+            bottom: 15%;
+            animation-delay: 2.5s;
+            font-size: 2.6rem;
+        }
+
+        .modal-title {
+            font-size: 3.5rem;
+            color: #ff1493;
+            text-shadow: 
+                0 0 30px rgba(255, 105, 180, 0.5),
+                0 0 60px rgba(255, 105, 180, 0.2);
+            margin-bottom: 40px;
+            animation: pulse 1s ease-in-out infinite;
+            font-family: 'Pacifico', cursive;
+        }
+
+        @keyframes pulse {
+            0%, 100% {
+                transform: scale(1);
+            }
+            50% {
+                transform: scale(1.05);
+            }
+        }
+
+        /* Gallery Grid */
+        .gallery {
+            display: none; /* Hide grid, use slideshow instead */
+        }
+
+        /* Slideshow Container */
+        .slideshow-container {
+            position: relative;
+            max-width: 380px;
+            width: 90%;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.08);
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(6.7px);
+            -webkit-backdrop-filter: blur(6.7px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .slide {
+            display: none;
+            width: 100%;
+            aspect-ratio: 1;
+            animation: fadeIn 0.8s ease-in-out;
+        }
+
+        .slide.active {
+            display: block;
+        }
+
+        .slide img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: 20px;
+        }
+
+        /* Slide Text Overlay */
+        .slide-text {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 1.8rem;
+            color: rgba(255, 255, 255, 0.95);
+            text-shadow: 0 4px 15px rgba(0, 0, 0, 0.6);
+            font-family: 'Pacifico', cursive;
+            font-weight: bold;
+            text-align: center;
+            pointer-events: none;
+            white-space: nowrap;
+            z-index: 4;
+        }
+
+        /* Close Button */
+        .close-btn {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            width: 40px;
+            height: 40px;
+            background: rgba(255, 105, 180, 0.8);
+            border: none;
+            border-radius: 8px;
+            color: white;
+            font-size: 1.8rem;
+            cursor: pointer;
+            z-index: 1001;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0;
+        }
+
+        .close-btn:hover {
+            background: rgba(255, 20, 147, 0.95);
+            transform: scale(1.1);
+        }
+
+        .close-btn:active {
+            transform: scale(0.95);
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: scale(0.95);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+
+        /* Navigation Buttons */
+        .slide-nav {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            background: rgba(255, 105, 180, 0.3);
+            color: white;
+            border: none;
+            font-size: 1.5rem;
+            padding: 12px 18px;
+            cursor: pointer;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+            z-index: 5;
+            font-weight: bold;
+        }
+
+        .slide-nav:hover {
+            background: rgba(255, 20, 147, 0.9);
+            transform: translateY(-50%) scale(1.1);
+        }
+
+        .prev {
+            left: 15px;
+        }
+
+        .next {
+            right: 15px;
+        }
+
+        /* Dot Indicators */
+        .dots-container {
+            text-align: center;
+            padding: 15px;
+            background: transparent;
+        }
+
+        .dot {
+            height: 12px;
+            width: 12px;
+            margin: 0 6px;
+            background-color: rgba(255, 105, 180, 0.5);
+            border-radius: 50%;
+            display: inline-block;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 2px solid rgba(255, 105, 180, 0.8);
+        }
+
+        .dot.active {
+            background-color: #FF69B4;
+            transform: scale(1.3);
+            box-shadow: 0 0 15px rgba(255, 105, 180, 0.8);
+        }
+
+        .dot:hover {
+            background-color: #FF1493;
+            transform: scale(1.2);
+        }
+
+        /* Credit Text */
+        .credit-text {
+            margin-top: 20px;
+            font-size: 0.85rem;
+            color: rgba(255, 105, 180, 0.7);
+            text-align: center;
+            font-family: 'Fredoka One', cursive;
+            letter-spacing: 0.5px;
+        }
+
+        .credit-text a {
+            color: rgba(255, 105, 180, 0.9);
+            text-decoration: none;
+            font-weight: bold;
+            transition: all 0.3s ease;
+        }
+
+        .credit-text a:hover {
+            color: #FF1493;
+            text-decoration: underline;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .question {
+                font-size: 2.5rem;
+            }
+
+            .modal-title {
+                font-size: 2.5rem;
+            }
+
+            .gallery {
+                grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+                gap: 15px;
+            }
+
+            .modal-content {
+                padding: 20px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .question {
+                font-size: 2rem;
+            }
+
+            .modal-title {
+                font-size: 2rem;
+                margin-bottom: 20px;
+            }
+
+            .gallery {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 10px;
+            }
+
+            #progressText {
+                font-size: 1.3rem;
+            }
+
+            .modal-content {
+                padding: 15px;
+            }
+        }
+
+        /* Instruction text (hidden by default) */
+        #instructionText {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: #ffffff;
+            font-size: 1rem;
+            z-index: 15;
+            pointer-events: none;
+            font-family: 'Pacifico', cursive;
+            text-shadow: 0 2px 10px rgba(0, 0, 0, 0.8);
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 15px;
+            padding: 12px 20px;
+            box-shadow: 0 8px 32px 0 rgba(255, 105, 180, 0.15);
+        }
+    </style>
+</head>
+<body>
+    <div id="videoContainer">
+        <video id="video" autoplay playsinline></video>
+        <div id="overlay"></div>
+        <canvas id="canvas"></canvas>
+
+        <div id="mainText">
+            <div class="question">Will you be my Valentine? 💕</div>
+        </div>
+
+        <div id="instructionText">
+            Make a heart shape with your hands to unlock the surprise ✨
+        </div>
+
+        <div id="progressText">HOLDING... 0%</div>
+
+        <div id="successModal">
+            <button class="close-btn" onclick="closeModal()">✕</button>
+            <div class="floating-heart">💕</div>
+            <div class="floating-heart">💖</div>
+            <div class="floating-heart">💗</div>
+            <div class="floating-heart">💝</div>
+            <div class="floating-heart">💓</div>
+            <div class="floating-heart">💞</div>
+            <div class="modal-content">
+                <div class="modal-title">Happy Valentine's Day! 💖</div>
+                
+                <!-- Slideshow -->
+                <div class="slideshow-container">
+                    <div class="slide active">
+                        <img src="cat images/cat 1.jpg" alt="cute cat 1">
+                        <div class="slide-text">Will you be my Valentine?<br>🌹</div>
+                    </div>
+                    <div class="slide">
+                        <img src="cat images/cat 2.jpg" alt="cute cat 2">
+                        <div class="slide-text">Will you be my Valentine?<br>🌹</div>
+                    </div>
+                    <div class="slide">
+                        <img src="cat images/cat 3.jpg" alt="cute cat 3">
+                        <div class="slide-text">Will you be my Valentine?<br>🌹</div>
+                    </div>
+                    <div class="slide">
+                        <img src="cat images/cat 4.jpg" alt="cute cat 4">
+                        <div class="slide-text">Will you be my Valentine?<br>🌹</div>
+                    </div>
+                    <div class="slide">
+                        <img src="cat images/cAT 5.jpg" alt="cute cat 5">
+                        <div class="slide-text">Will you be my Valentine?<br>🌹</div>
+                    </div>
+                    <div class="slide">
+                        <img src="cat images/cat 6.jpg" alt="cute cat 6">
+                        <div class="slide-text">Will you be my Valentine?<br>🌹</div>
+                    </div>
+
+                    <!-- Navigation Buttons -->
+                    <button class="slide-nav prev" onclick="changeSlide(-1)">❮</button>
+                    <button class="slide-nav next" onclick="changeSlide(1)">❯</button>
+                </div>
+
+                <!-- Dot Indicators -->
+                <div class="dots-container">
+                    <span class="dot active" onclick="goToSlide(0)"></span>
+                    <span class="dot" onclick="goToSlide(1)"></span>
+                    <span class="dot" onclick="goToSlide(2)"></span>
+                    <span class="dot" onclick="goToSlide(3)"></span>
+                    <span class="dot" onclick="goToSlide(4)"></span>
+                    <span class="dot" onclick="goToSlide(5)"></span>
+                    <div class="credit-text">Made with ❤️ by <a href="https://github.com/sharmaronit" target="_blank">@sharma.ronnitt</a></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const video = document.getElementById('video');
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const progressText = document.getElementById('progressText');
+        const mainText = document.getElementById('mainText');
+        const successModal = document.getElementById('successModal');
+        const videoContainer = document.getElementById('videoContainer');
+
+        let hands;
+        let camera;
+        let holdingStartTime = null;
+        let isHolding = false;
+        let gestureLocked = false;
+        let animationFrameId = null;
+
+        // Hand Gesture Constants
+        const THUMB_TIP = 4;
+        const INDEX_TIP = 8;
+        const DISTANCE_THRESHOLD = 120; // pixels - increased for easier detection
+        const HOLD_DURATION = 2000; // milliseconds (2 seconds)
+
+        // Initialize MediaPipe Hands with proper error handling
+        async function setupHands() {
+            try {
+                console.log('🔧 Initializing MediaPipe Hands...');
+
+                hands = new Hands({
+                    locateFile: (file) => {
+                        return `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`;
+                    }
+                });
+
+                hands.setOptions({
+                    maxNumHands: 2,
+                    modelComplexity: 1,
+                    minDetectionConfidence: 0.7,
+                    minTrackingConfidence: 0.5,
+                });
+
+                hands.onResults(onHandsResults);
+
+                console.log('✓ Hands initialized, setting up camera...');
+
+                // Initialize camera with proper error handling
+                camera = new Camera(video, {
+                    onFrame: async () => {
+                        await hands.send({ image: video });
+                    },
+                    width: 1280,
+                    height: 720,
+                });
+
+                camera.start();
+                console.log('✓ Camera started successfully');
+            } catch (error) {
+                console.error('❌ Setup error:', error);
+                throw error;
+            }
+        }
+
+        // Resize canvas to match video
+        function resizeCanvas() {
+            canvas.width = videoContainer.offsetWidth;
+            canvas.height = videoContainer.offsetHeight;
+        }
+        resizeCanvas();
+        window.addEventListener('resize', resizeCanvas);
+
+        // Calculate distance between two landmarks
+        function calculateDistance(landmark1, landmark2) {
+            const dx = landmark1.x - landmark2.x;
+            const dy = landmark1.y - landmark2.y;
+            return Math.sqrt(dx * dx + dy * dy);
+        }
+
+        // Detect if a hand is making a heart gesture
+        function detectHeartGesture(landmarks, canvasWidth, canvasHeight) {
+            // Get thumb tip and index tip
+            const thumbTip = landmarks[THUMB_TIP];
+            const indexTip = landmarks[INDEX_TIP];
+
+            // Convert normalized coordinates to pixel coordinates
+            const thumbPixelX = thumbTip.x * canvasWidth;
+            const thumbPixelY = thumbTip.y * canvasHeight;
+            const indexPixelX = indexTip.x * canvasWidth;
+            const indexPixelY = indexTip.y * canvasHeight;
+
+            // Calculate distance between thumb and index fingers in pixels
+            // Lower distance = fingers are closer/touching
+            const distance = Math.sqrt(
+                Math.pow(thumbPixelX - indexPixelX, 2) + 
+                Math.pow(thumbPixelY - indexPixelY, 2)
+            );
+
+            const isTouching = distance < DISTANCE_THRESHOLD;
+
+            return {
+                distance: distance,
+                thumbPos: { x: thumbPixelX, y: thumbPixelY },
+                indexPos: { x: indexPixelX, y: indexPixelY },
+                isTouching: isTouching,
+            };
+        }
+
+        // Draw hand skeleton on canvas with proper mirroring
+        function drawHand(landmarks, canvasWidth, canvasHeight) {
+            // Draw joints (landmarks) as white dots
+            landmarks.forEach((landmark) => {
+                const x = landmark.x * canvasWidth;
+                const y = landmark.y * canvasHeight;
+
+                ctx.fillStyle = '#FFFFFF';
+                ctx.beginPath();
+                ctx.arc(x, y, 5, 0, 2 * Math.PI);
+                ctx.fill();
+            });
+
+            // Define connections (finger bones)
+            const connections = [
+                // Palm connections
+                [0, 1], [1, 2], [2, 3], [3, 4], // Thumb
+                [0, 5], [5, 6], [6, 7], [7, 8], // Index
+                [0, 9], [9, 10], [10, 11], [11, 12], // Middle
+                [0, 13], [13, 14], [14, 15], [15, 16], // Ring
+                [0, 17], [17, 18], [18, 19], [19, 20], // Pinky
+                // Finger tips to adjacent fingers
+                [5, 9], [9, 13], [13, 17],
+            ];
+
+            // Draw connections with hot pink neon glow
+            connections.forEach(([start, end]) => {
+                const startPos = landmarks[start];
+                const endPos = landmarks[end];
+
+                const startX = startPos.x * canvasWidth;
+                const startY = startPos.y * canvasHeight;
+                const endX = endPos.x * canvasWidth;
+                const endY = endPos.y * canvasHeight;
+
+                // Draw neon glow
+                ctx.strokeStyle = 'rgba(255, 105, 180, 0.3)';
+                ctx.lineWidth = 12;
+                ctx.lineCap = 'round';
+                ctx.beginPath();
+                ctx.moveTo(startX, startY);
+                ctx.lineTo(endX, endY);
+                ctx.stroke();
+
+                // Draw main line
+                ctx.strokeStyle = '#FF69B4';
+                ctx.lineWidth = 3;
+                ctx.lineCap = 'round';
+                ctx.beginPath();
+                ctx.moveTo(startX, startY);
+                ctx.lineTo(endX, endY);
+                ctx.stroke();
+            });
+        }
+
+        // Handle hand tracking results
+        let bothHandsValid = false;
+        let leftHandGesture = null;
+        let rightHandGesture = null;
+        let detectedCount = 0;
+
+        function onHandsResults(results) {
+            const canvasWidth = canvas.width;
+            const canvasHeight = canvas.height;
+
+            // Clear canvas
+            ctx.clearRect(0, 0, canvasWidth, canvasHeight);
+
+            // Reset hand detection
+            bothHandsValid = false;
+            leftHandGesture = null;
+            rightHandGesture = null;
+
+            // Process detected hands - MediaPipe Hands API
+            if (results.multiHandLandmarks && results.multiHandedness && results.multiHandLandmarks.length > 0) {
+                results.multiHandLandmarks.forEach((landmarks, index) => {
+                    const handedness = results.multiHandedness[index].label;
+
+                    // Draw hand skeleton
+                    drawHand(landmarks, canvasWidth, canvasHeight);
+
+                    // Detect gesture
+                    const gesture = detectHeartGesture(landmarks, canvasWidth, canvasHeight);
+
+                    if (handedness === 'Left') {
+                        leftHandGesture = gesture;
+                    } else if (handedness === 'Right') {
+                        rightHandGesture = gesture;
+                    }
+                });
+
+                // Check if both hands are detected and making the gesture
+                if (leftHandGesture && rightHandGesture) {
+                    const leftTouching = leftHandGesture.isTouching;
+                    const rightTouching = rightHandGesture.isTouching;
+                    
+                    bothHandsValid = leftTouching && rightTouching;
+                    
+                    if (bothHandsValid) {
+                        console.log('💝 Both hands touching! Left dist:', leftHandGesture.distance.toFixed(0), 'Right dist:', rightHandGesture.distance.toFixed(0));
+                    }
+                }
+            }
+
+            // Update holding state
+            updateHoldingState();
+        }
+
+        // Update the holding state and progress
+        function updateHoldingState() {
+            if (!gestureLocked && bothHandsValid) {
+                if (!isHolding) {
+                    isHolding = true;
+                    holdingStartTime = Date.now();
+                    console.log('🎯 START HOLDING NOW!');
+                }
+
+                const elapsedTime = Date.now() - holdingStartTime;
+                const progress = Math.min(Math.floor(elapsedTime / HOLD_DURATION * 100), 100);
+
+                progressText.classList.add('active');
+                progressText.textContent = `HOLDING... ${progress}%`;
+
+                if (progress >= 100) {
+                    console.log('💖 100% reached! Triggering success!');
+                    triggerSuccess();
+                }
+            } else {
+                if (isHolding) {
+                    isHolding = false;
+                    holdingStartTime = null;
+                    progressText.classList.remove('active');
+                    progressText.textContent = 'HOLDING... 0%';
+                    console.log('❌ Gesture broken, counter reset');
+                }
+            }
+        }
+
+        // Trigger success state
+        function triggerSuccess() {
+            if (gestureLocked) return; // Prevent multiple triggers
+            
+            gestureLocked = true;
+            isHolding = false;
+            progressText.classList.remove('active');
+
+            console.log('🎉 SUCCESS TRIGGERED!');
+
+            // Trigger confetti
+            triggerConfetti();
+
+            // Hide main text
+            mainText.classList.add('hidden');
+
+            // Show success modal after a brief delay for confetti to be visible
+            setTimeout(() => {
+                successModal.classList.add('visible');
+                console.log('💝 Success modal displayed');
+                // Start the slideshow
+                startSlideshow();
+            }, 300);
+        }
+
+        // Close modal and reset to main screen
+        function closeModal() {
+            successModal.classList.remove('visible');
+            gestureLocked = false;
+            currentSlide = 0;
+            clearInterval(autoPlayTimer);
+            mainText.classList.remove('hidden');
+            console.log('❌ Modal closed, ready for next gesture');
+        }
+
+        // Trigger confetti explosion
+        function triggerConfetti() {
+            // Multiple confetti bursts for maximum celebration
+            confetti({
+                particleCount: 150,
+                spread: 100,
+                origin: { x: 0.5, y: 0.5 },
+                colors: ['#FF69B4', '#FF1493', '#FFB6C1', '#FFC0CB', '#FFFFFF'],
+            });
+
+            // Additional burst from top
+            setTimeout(() => {
+                confetti({
+                    particleCount: 100,
+                    spread: 120,
+                    origin: { x: 0.3, y: 0 },
+                    colors: ['#FF69B4', '#FF1493', '#FFB6C1'],
+                });
+            }, 200);
+
+            // Additional burst from top right
+            setTimeout(() => {
+                confetti({
+                    particleCount: 100,
+                    spread: 120,
+                    origin: { x: 0.7, y: 0 },
+                    colors: ['#FF69B4', '#FF1493', '#FFB6C1'],
+                });
+            }, 400);
+        }
+
+        // Request camera permissions and initialize
+        async function initialize() {
+            try {
+                console.log('🎥 Setting up camera and hands...');
+                await setupHands();
+            } catch (error) {
+                console.error('❌ Initialization error:', error);
+                alert('Please allow camera access to use this app.');
+            }
+        }
+
+        // Slideshow functionality
+        let currentSlide = 0;
+        let autoPlayTimer = null;
+
+        function changeSlide(n) {
+            showSlide(currentSlide += n);
+            resetAutoPlay();
+        }
+
+        function goToSlide(n) {
+            showSlide(currentSlide = n);
+            resetAutoPlay();
+        }
+
+        function showSlide(n) {
+            const slides = document.querySelectorAll('.slide');
+            const dots = document.querySelectorAll('.dot');
+
+            if (n >= slides.length) {
+                currentSlide = 0;
+            } else if (n < 0) {
+                currentSlide = slides.length - 1;
+            }
+
+            slides.forEach(slide => slide.classList.remove('active'));
+            dots.forEach(dot => dot.classList.remove('active'));
+
+            slides[currentSlide].classList.add('active');
+            dots[currentSlide].classList.add('active');
+        }
+
+        function autoPlaySlideshow() {
+            showSlide(currentSlide += 1);
+        }
+
+        function resetAutoPlay() {
+            clearInterval(autoPlayTimer);
+            autoPlayTimer = setInterval(autoPlaySlideshow, 1500); // Change slide every 1.5 seconds
+        }
+
+        // Start auto-play when modal is shown
+        function startSlideshow() {
+            resetAutoPlay();
+        }
+
+        // Start the app
+        window.addEventListener('load', () => {
+            console.log('🚀 Page loaded, initializing...');
+            initialize();
+        });
+    </script>
+</body>
+</html>
